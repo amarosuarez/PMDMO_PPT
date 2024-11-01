@@ -2,6 +2,7 @@ package com.example.piedrapapeltijerasamaro
 
 import Eleccion
 import Elegido
+import Ganador
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -37,6 +38,12 @@ class MainActivity : ComponentActivity() {
                     Elegido(
                         navController,
                         backStackEntry.arguments?.getString("opcion") ?: "0"
+                    )
+                }
+                composable("ganador/{ganador}") { backStackEntry ->
+                    Ganador(
+                        navController,
+                        backStackEntry.arguments?.getString("ganador") ?: "0"
                     )
                 }
             }

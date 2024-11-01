@@ -46,7 +46,7 @@ fun Eleccion(navController: NavController) {
     Column(
         Modifier
             .fillMaxSize()
-            .padding(top = 40.dp),
+            .padding(top = 40.dp, start = 16.dp, end = 16.dp),
     ) {
         Column(
             Modifier.padding(5.dp)
@@ -81,7 +81,7 @@ fun Eleccion(navController: NavController) {
         }
         HorizontalDivider(
             color = Color.Blue,
-            thickness = 1.dp
+            thickness = 2.dp
         )
         Column(
             Modifier
@@ -150,18 +150,6 @@ fun Eleccion(navController: NavController) {
     }
 }
 
-fun calcularResultado(maquina: Int, opcionInt: Int, context: Context) {
-    if ((maquina == 1 && opcionInt == 3) || (maquina == 2 && opcionInt == 1) || (maquina == 3 && opcionInt == 2)) {
-        Toast.makeText(context, "Oh vaya... Has perdido!", Toast.LENGTH_SHORT).show()
-        ptsMaquina += 1
-    } else if ((maquina == 3 && opcionInt == 1) || (maquina == 1 && opcionInt == 2) || (maquina == 2 && opcionInt == 3)) {
-        Toast.makeText(context, "Enhorabuena! Has ganado", Toast.LENGTH_SHORT).show()
-        ptsJugador += 1
-    } else {
-        Toast.makeText(context, "Empate", Toast.LENGTH_SHORT).show()
-    }
-}
-
 @Composable
 fun Elegido(navController: NavController, opcion: String) {
     val context = LocalContext.current
@@ -183,42 +171,139 @@ fun Elegido(navController: NavController, opcion: String) {
         jugadorEleccion = R.drawable.tijeras
     }
 
-    calcularResultado(maquina, opcionInt, context)
+    // Variables auxiliares para evitar que sume más de uno
+    var pMaquina = ptsMaquina
+    var pJugador = ptsJugador
 
-    Column {
+    // Variable para controlar la visualización del Toast
+    var showToast by remember { mutableStateOf(false) }
+
+    if ((maquina == 1 && opcionInt == 3) || (maquina == 2 && opcionInt == 1) || (maquina == 3 && opcionInt == 2)) {
+        if (!showToast) {
+            Toast.makeText(context, "Oh vaya... Has perdido!", Toast.LENGTH_SHORT).show()
+            showToast = true
+        }
+        pMaquina += 1
+    } else if ((maquina == 3 && opcionInt == 1) || (maquina == 1 && opcionInt == 2) || (maquina == 2 && opcionInt == 3)) {
+        if (!showToast) {
+            Toast.makeText(context, "Enhorabuena! Has ganado", Toast.LENGTH_SHORT).show()
+            showToast = true
+        }
+        pJugador += 1
+    } else {
+        if (!showToast) {
+            Toast.makeText(context, "Empate", Toast.LENGTH_SHORT).show()
+            showToast = true
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = "Resultados",
+            fontSize = 24.sp,
+            color = Color.Blue,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+
+        // Elección de la máquina
         Column(
-            Modifier.weight(1f)
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
             Image(
                 painter = painterResource(id = maquinaEleccion),
                 contentDescription = "Eleccion de la máquina",
-                Modifier.size(50.dp,50.dp)
+                modifier = Modifier.size(100.dp)
             )
+            Text(text = "Máquina", fontSize = 18.sp, color = Color.Gray)
         }
+
         HorizontalDivider(
             color = Color.Blue,
-            thickness = 2.dp
+            thickness = 2.dp,
+            modifier = Modifier.padding(vertical = 16.dp)
         )
+
+        // Elección del jugador
         Column(
-            Modifier.weight(1f)
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
             Image(
                 painter = painterResource(id = jugadorEleccion),
-                contentDescription = "Eleccion de la máquina",
-                Modifier.size(50.dp,50.dp)
+                contentDescription = "Eleccion del jugador",
+                modifier = Modifier.size(100.dp)
             )
+            Text(text = "Tú", fontSize = 18.sp, color = Color.Gray)
         }
-        Column {
-            Button(
-                onClick = {
+
+        Button(
+            onClick = {
+                ptsJugador = pJugador
+                ptsMaquina = pMaquina
+
+                if (ptsJugador == 3 || ptsMaquina == 3) {
+                    if (ptsJugador > ptsMaquina) {
+                        navController.navigate("ganador/0")
+                    } else {
+                        navController.navigate("ganador/1")
+                    }
+                } else {
                     navController.popBackStack()
                 }
-            ) {
-                Text(
-                    text = "Volver a jugar..."
-                )
-            }
+            },
+            modifier = Modifier
+                .padding(top = 24.dp)
+                .fillMaxWidth()
+        ) {
+            Text(
+                text = "Volver a jugar...",
+                fontSize = 18.sp
+            )
         }
     }
-
 }
+
+@Composable
+fun Ganador(navController: NavController, ganador: String) {
+    var ganadorInt = ganador.toInt()
+    var image = if (ganadorInt == 0) R.drawable.win else R.drawable.lose
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Image(
+            painter = painterResource(id = image),
+            contentDescription = "Resultado",
+            modifier = Modifier.size(150.dp)
+        )
+        Button(
+            onClick = {
+                // Reiniciamos las puntuaciones
+                ptsJugador = 0
+                ptsMaquina = 0
+                navController.navigate("eleccion")
+            },
+            modifier = Modifier.padding(top = 16.dp)
+        ) {
+            Text(text = "Volver a jugar")
+        }
+    }
+}
+
