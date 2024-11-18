@@ -1,12 +1,12 @@
 {
   "formatVersion": 1,
   "database": {
-    "version": 1,
-    "identityHash": "3294605c723a3a9ee4cdabd1ca15b7df",
+    "version": 2,
+    "identityHash": "d07f8b631889631dcaca9b3d3ecdbd16",
     "entities": [
       {
         "tableName": "usuarios",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`nick` TEXT PRIMARY KEY AUTOINCREMENT NOT NULL, `pj` INTEGER NOT NULL, `pg` INTEGER NOT NULL, `lg` INTEGER NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`nick` TEXT NOT NULL, `pj` INTEGER NOT NULL, `pg` INTEGER NOT NULL, `lg` INTEGER NOT NULL, PRIMARY KEY(`nick`))",
         "fields": [
           {
             "fieldPath": "nick",
@@ -34,7 +34,7 @@
           }
         ],
         "primaryKey": {
-          "autoGenerate": true,
+          "autoGenerate": false,
           "columnNames": [
             "nick"
           ]
@@ -46,7 +46,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '3294605c723a3a9ee4cdabd1ca15b7df')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'd07f8b631889631dcaca9b3d3ecdbd16')"
     ]
   }
 }

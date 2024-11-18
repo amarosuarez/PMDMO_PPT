@@ -1,7 +1,9 @@
-import android.content.Context
+import android.widget.Button
+import android.widget.Space
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,8 +11,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.staggeredgrid.LazyHorizontalStaggeredGrid
-import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,23 +23,31 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.piedrapapeltijerasamaro.R
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.TextField
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.toLowerCase
+import com.example.piedrapapeltijerasamaro.MainActivity.Companion.basedatos
+import com.example.piedrapapeltijerasamaro.dal.UserEntity
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import java.util.Locale
 import kotlin.random.Random
 
 var ptsJugador = 0
 var ptsMaquina = 0
+var nickUsuario = ""
 
 @Composable
 fun Eleccion(navController: NavController) {
@@ -48,19 +56,41 @@ fun Eleccion(navController: NavController) {
             .fillMaxSize()
             .padding(top = 40.dp, start = 16.dp, end = 16.dp),
     ) {
-        Column(
-            Modifier.padding(5.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .border(BorderStroke(2.dp, Color.Blue), shape = RoundedCornerShape(24.dp))
-                    .padding(10.dp)
+        Row(Modifier.fillMaxWidth()) {
+            Column(
+                Modifier
+                    .weight(1f)
+                    .padding(5.dp),
+                horizontalAlignment = Alignment.Start
             ) {
-                Text(
-                    text = "Resultado: $ptsMaquina - $ptsJugador"
-                )
+                Box(
+                    modifier = Modifier
+                        .border(BorderStroke(2.dp, Color.Blue), shape = RoundedCornerShape(24.dp))
+                        .padding(10.dp)
+                ) {
+                    Text(
+                        text = "Resultado: $ptsMaquina - $ptsJugador"
+                    )
+                }
+            }
+            Column(
+                Modifier
+                    .weight(1f)
+                    .padding(5.dp),
+                horizontalAlignment = Alignment.End
+            ) {
+                Box(
+                    modifier = Modifier
+                        .border(BorderStroke(2.dp, Color.Blue), shape = RoundedCornerShape(24.dp))
+                        .padding(10.dp)
+                ) {
+                    Text(
+                        text = "Jugando como $nickUsuario"
+                    )
+                }
             }
         }
+
         Column(
             Modifier
                 .weight(1f)
@@ -145,13 +175,22 @@ fun Eleccion(navController: NavController) {
                         )
                     }
                 }
+                Spacer(Modifier.height(20.dp))
+                Button(
+                    onClick = {
+                        navController.navigate("intermedio")
+                    },
+                    Modifier.fillMaxWidth(),
+                ) {
+                    Text("Volver al menú")
+                }
             }
         }
     }
 }
 
 @Composable
-fun Elegido(navController: NavController, opcion: String) {
+fun Elegido(navController: NavController, opcion: String, coroutine: CoroutineScope) {
     val context = LocalContext.current
     var maquina by remember { mutableStateOf(Random.nextInt(1, 4)) }
     var opcionInt = opcion.toInt()
@@ -187,6 +226,13 @@ fun Elegido(navController: NavController, opcion: String) {
     } else if ((maquina == 3 && opcionInt == 1) || (maquina == 1 && opcionInt == 2) || (maquina == 2 && opcionInt == 3)) {
         if (!showToast) {
             Toast.makeText(context, "Enhorabuena! Has ganado", Toast.LENGTH_SHORT).show()
+            // Añadimos una lucha ganada
+            LaunchedEffect(Unit) {
+                val user = basedatos.userDao().get(nickUsuario)
+                user.lg += 1
+
+                basedatos.userDao().update(user)
+            }
             showToast = true
         }
         pJugador += 1
@@ -256,9 +302,31 @@ fun Elegido(navController: NavController, opcion: String) {
 
                 if (ptsJugador == 3 || ptsMaquina == 3) {
                     if (ptsJugador > ptsMaquina) {
-                        navController.navigate("ganador/0")
+                        coroutine.launch {
+                            // Sumamos una partida ganada y jugada
+                            val user = basedatos.userDao().get(nickUsuario)
+
+                            user.pg += 1
+                            user.pj += 1
+                            basedatos.userDao().update(user)
+                        }
+                        navController.navigate("ganador/0") {
+                            popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                            launchSingleTop = true
+                        }
+
                     } else {
-                        navController.navigate("ganador/1")
+                        coroutine.launch {
+                            // Sumamos una partida jugada
+                            val user = basedatos.userDao().get(nickUsuario)
+
+                            user.pj += 1
+                            basedatos.userDao().update(user)
+                        }
+                        navController.navigate("ganador/1") {
+                            popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                            launchSingleTop = true
+                        }
                     }
                 } else {
                     navController.popBackStack()
@@ -276,6 +344,7 @@ fun Elegido(navController: NavController, opcion: String) {
     }
 }
 
+// Composable que muestra al ganador
 @Composable
 fun Ganador(navController: NavController, ganador: String) {
     var ganadorInt = ganador.toInt()
@@ -298,7 +367,10 @@ fun Ganador(navController: NavController, ganador: String) {
                 // Reiniciamos las puntuaciones
                 ptsJugador = 0
                 ptsMaquina = 0
-                navController.navigate("eleccion")
+                navController.navigate("eleccion") {
+                    popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                    launchSingleTop = true
+                }
             },
             modifier = Modifier.padding(top = 16.dp)
         ) {
@@ -307,3 +379,305 @@ fun Ganador(navController: NavController, ganador: String) {
     }
 }
 
+// Composable que hace el login
+@Composable
+fun Login(navController: NavController, coroutine: CoroutineScope) {
+    val context = LocalContext.current
+    var username by remember { mutableStateOf("") }
+    Column (
+        Modifier.padding(10.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = "Nombre de usuario"
+        )
+        Spacer(Modifier.height(10.dp))
+        TextField(
+            value = username,
+            onValueChange = { username = it.lowercase() },
+            label = { Text("Nombre de usuario") },
+            placeholder = { Text("Escribe tu nombre de usuario") },
+            singleLine = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        )
+        Spacer(Modifier.height(10.dp))
+        Button(
+            onClick = {
+                if (username != "") {
+                    coroutine.launch {
+                        // Comprobamos si ya existe ese nombre de usuario
+                        val exists = basedatos.userDao().existsByNick(username)
+
+                        // En caso de que no exista lo añadimos
+                        if (!exists) {
+                            val user = UserEntity(nick = username)
+                            basedatos.userDao().insert(user)
+                            nickUsuario = user.nick
+                            Toast.makeText(context, "Creando a $username...", Toast.LENGTH_SHORT).show()
+                        } else {
+                            nickUsuario = username
+                            Toast.makeText(context, "Iniciando como $username...", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+
+                    navController.navigate("intermedio")
+                } else {
+                    Toast.makeText(context, "Rellena los campos", Toast.LENGTH_SHORT).show()
+                }
+            }
+        ) {
+            Text(text = "Guardar")
+        }
+    }
+}
+
+// Composable intermediaria que muestra un menú de acciones al usuario
+@Composable
+fun Intermedio(navController: NavController, coroutine: CoroutineScope) {
+    Column(
+        Modifier.fillMaxSize().padding(horizontal = 20.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "¡Hola, $nickUsuario! ¿Qué quieres hacer?",
+            fontSize = 18.sp
+        )
+        Spacer(Modifier.height(20.dp))
+        Button(
+            onClick = {
+                navController.navigate("eleccion")
+            },
+            Modifier.fillMaxWidth()
+        ) {
+            Text("Jugar")
+        }
+        Spacer(Modifier.height(20.dp))
+        Button(
+            onClick = {
+                navController.navigate("estadisticas")
+            },
+            Modifier.fillMaxWidth()
+        ) {
+            Text("Ver estadisticas")
+        }
+        Spacer(Modifier.height(20.dp))
+        Button(
+            onClick = {
+                navController.navigate("login") {
+                    // Reinciamos todos los datos
+                    nickUsuario = ""
+                    ptsJugador = 0
+                    ptsMaquina = 0
+                    popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                    launchSingleTop = true
+                }
+            },
+            Modifier.fillMaxWidth()
+        ) {
+            Text("Cerrar sesión")
+        }
+        Spacer(Modifier.height(20.dp))
+        DeleteUserButton(navController, coroutine)
+    }
+}
+
+@Composable
+fun Estadisticas(navController: NavController, coroutine: CoroutineScope) {
+    var userM by remember { mutableStateOf(UserEntity()) }
+    var allUsers by remember { mutableStateOf<List<UserEntity>>(emptyList()) }
+
+    // Obtener estadísticas del usuario actual
+    LaunchedEffect(Unit) {
+        userM = basedatos.userDao().get(nickUsuario)
+
+        // Obtener todas las estadísticas de los usuarios y ordenarlos
+        allUsers = basedatos.userDao().getAll().sortedWith(
+            compareByDescending<UserEntity> { it.pg } // Ordenar por pg de mayor a menor
+                .thenBy { it.pj } // En caso de empate, ordenar por pj de menor a mayor
+                .thenBy { it.lg } // En caso de empate, ordena por lg de menor a mayor
+            // Por último ordena por nombre
+        )
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(20.dp)
+    ) {
+        Text(
+            text = "Tus estadísticas",
+            Modifier.padding(top = 10.dp)
+        )
+        Spacer(Modifier.height(10.dp))
+
+        // Encabezado de la primera tabla
+        Row(
+            modifier = Modifier
+                .background(Color.Gray)
+                .padding(8.dp)
+                .fillMaxWidth()
+        ) {
+            Text(
+                text = "Partidas Jugadas",
+                modifier = Modifier.weight(1f),
+                color = Color.White
+            )
+            Text(
+                text = "Luchas Ganadas",
+                modifier = Modifier.weight(1f),
+                color = Color.White
+            )
+            Text(
+                text = "Partidas Ganadas",
+                modifier = Modifier.weight(1f),
+                color = Color.White
+            )
+        }
+
+        // Filas de datos de la primera tabla
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp)
+                .border(1.dp, Color.LightGray)
+        ) {
+            Text(
+                text = userM.pj.toString(),
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                text = userM.lg.toString(),
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                text = userM.pg.toString(),
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        // Espacio entre las tablas
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Text(
+            text = "Estadísticas generales",
+        )
+
+        Spacer(Modifier.height(10.dp))
+
+        // Encabezado de la segunda tabla (estadísticas de todos los usuarios)
+        Row(
+            modifier = Modifier
+                .background(Color.Gray)
+                .padding(8.dp)
+                .fillMaxWidth()
+        ) {
+            Text(
+                text = "Usuario",
+                modifier = Modifier.weight(1f),
+                color = Color.White
+            )
+            Text(
+                text = "Partidas Jugadas",
+                modifier = Modifier.weight(1f),
+                color = Color.White
+            )
+            Text(
+                text = "Luchas Ganadas",
+                modifier = Modifier.weight(1f),
+                color = Color.White
+            )
+            Text(
+                text = "Partidas Ganadas",
+                modifier = Modifier.weight(1f),
+                color = Color.White
+            )
+        }
+
+        // Filas de la segunda tabla (estadísticas de todos los usuarios)
+        allUsers.forEach { user ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(6.dp)
+                    .border(1.dp, Color.LightGray)
+            ) {
+                Text(
+                    text = user.nick, // Asumiendo que `nick` es el nombre del usuario
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    text = user.pj.toString(),
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    text = user.lg.toString(),
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    text = user.pg.toString(),
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+
+
+// Composable que elimina al usuario
+@Composable
+fun DeleteUserButton(navController: NavController, coroutine: CoroutineScope) {
+    var showDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
+    Button(
+        onClick = { showDialog = true },
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text("Eliminar este usuario")
+    }
+
+    // Mostramos un dialog para corroborar que desea eliminar al usuario
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text("Confirmación") },
+            text = { Text("¿Estás seguro de que deseas eliminar a $nickUsuario?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        // Eliminamos al usuario de la bd y volvemos a la pantalla de login
+                        coroutine.launch {
+                            val user = basedatos.userDao().get(nickUsuario)
+                            basedatos.userDao().delete(user)
+                            Toast.makeText(context, "$nickUsuario eliminado", Toast.LENGTH_SHORT).show()
+                            // Reinciamos todos los datos
+                            nickUsuario = ""
+                            ptsJugador = 0
+                            ptsMaquina = 0
+                        }
+                        showDialog = false
+
+                        navController.navigate("login") {
+                            popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    }
+                ) {
+                    Text("Sí")
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { showDialog = false }
+                ) {
+                    Text("No")
+                }
+            }
+        )
+    }
+}

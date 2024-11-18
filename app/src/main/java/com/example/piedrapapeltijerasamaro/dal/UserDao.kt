@@ -10,14 +10,39 @@ import androidx.room.Update
 
 @Dao
 interface UserDao {
+    // Obtiene todos los usuarios
     @Query("SELECT * FROM usuarios")
     suspend fun getAll(): List<UserEntity>
-    @Query("SELECT * FROM usuarios WHERE ID = :id")
-    suspend fun get(id: Long): UserEntity
+
+    // Obtiene las partidas jugadas de un usuario
+    @Query("SELECT pj FROM usuarios WHERE nick = :nick")
+    suspend fun getPJ(nick: String): Int
+
+    // Obtiene las partidas ganadas de un usuario
+    @Query("SELECT pg FROM usuarios WHERE nick = :nick")
+    suspend fun getPG(nick: String): Int
+
+    // Obtiene las luchas ganadas de un usuario
+    @Query("SELECT lg FROM usuarios WHERE nick = :nick")
+    suspend fun getLG(nick: String): Int
+
+    // Obtiene un usuario
+    @Query("SELECT * FROM usuarios WHERE nick = :nick")
+    suspend fun get(nick: String): UserEntity
+
+    // Comprueba si un nombre de usuario ya está registrado
+    @Query("SELECT COUNT(*) FROM usuarios WHERE nick = :nick")
+    suspend fun existsByNick(nick: String): Boolean
+
+    // Inserta un usuario, reemplazando en caso de conflicto
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(tarea: UserEntity): Long
+    suspend fun insert(user: UserEntity): Long
+
+    // Actualiza un usuario
     @Update
-    suspend fun update(tarea: UserEntity)
+    suspend fun update(user: UserEntity)
+
+    // Elimina un usuario
     @Delete
-    suspend fun delete(tarea: UserEntity)
+    suspend fun delete(user: UserEntity)
 }
